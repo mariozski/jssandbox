@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<!--
+  Created using jsbin.com
+  Source can be edited via http://jsbin.com/ozobad/10/edit
+-->
+<head>
+<script src="http://yui.yahooapis.com/3.8.1/build/yui/yui-min.js"></script>
+<meta charset=utf-8 />
+<title>JS Bin</title>
+
+<style id="jsbin-css">
+.block {
+  width: 50px;
+  height: 50px;
+  float: left;
+  margin: 4px;
+  border: 1px solid green;
+  text-align: center;
+  line-height: 50px;
+  font-family: verdana;
+}
+
+.highlighted {
+  background: red;
+}
+
+#canvas {
+  width: 300px;
+  height: 300px;
+}
+
+#reset {
+  padding: 5px;
+  border: 1px solid red;
+  width: 50px;
+  text-align: center;
+}
+
+#reset:hover {
+  background: red;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+  <div id="canvas"></div>
+  <br>
+  SCORE: <span id="score">0</span>
+  <div id="reset">RESET</div>
+<script>
+YUI().use('node', function(Y) {
+  var canvas = Y.one("#canvas"),
+      i,
+      timeout = 1000,
+      score = 0;
+  
+  for (i = 0; i < 25; i++) {
+    var block = Y.Node.create('<div class="block">'+i+'</div>');
+    canvas.appendChild(block);  
+  }
+  
+  Y.one('#reset').on('click', function() {
+    timeout = 1000;
+    score = 0;
+    updateScore(score);
+  });
+  
+  Y.all('.block').on('click', function (e) {
+    if (Y.one(e.target).hasClass('highlighted')) {
+      updateScore(++score);
+      timeout -= 20;
+    } else {
+      updateScore(--score);
+      timeout += 20;
+    }
+  });
+  
+  function updateScore(score) {
+     Y.one('#score').setHTML(score); 
+  }
+  
+  function animate() {
+    var random = Math.floor((Math.random()*25));
+    Y.all('.block').removeClass('highlighted');
+    Y.all('.block').item(random).addClass('highlighted');
+    
+    setTimeout(animate, timeout);  
+  }
+  
+  animate();
+});
+</script>
+</body>
+</html>
