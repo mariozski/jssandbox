@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!--
+Created using JS Bin
+http://jsbin.com
+
+Copyright (c) 2014 by mariozski (http://jsbin.com/uhusak/26/edit)
+
+Released under the MIT license: http://jsbin.mit-license.org
+-->
+<html>
+<head>
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+ 
+<meta charset=utf-8 />
+  <link rel="stylesheet" href="http://nedbee.me/metronome/metronome_fonts.css" type="text/css" />
+<title>JS Bin</title>
+<style id="jsbin-css">
+@media only screen and (max-device-width: 480px) {
+  body {
+    width: 300px;
+  }
+}
+
+@font-face {
+  font-family: 'Symbola';
+  src: url(http://xuen.pl/metronome/Symbola.ttf);
+}
+
+a#start,
+a#stop {
+  border: 1px solid red;
+  padding: 5px 10px;
+  
+  -webkit-transition:background 0.2s ease-in;  
+  -moz-transition:background 0.2s ease-in;  
+  -o-transition:background 0.2s ease-in;  
+  transition:background 0.2s ease-in;  
+}
+
+a#start:hover,
+a#stop:hover {
+  background: red;
+}
+
+#bpm {
+  font-family: 'Digital';
+  font-size: 180pt;
+  color: #3A2F2F;
+}
+
+#display { 
+ background: #8FAC64; 
+}
+
+#pattern {
+  font-size: 32pt;
+  font-family: 'Symbola';
+  
+  cursor: pointer;
+  text-align: right;
+  position: absolute;
+  top: 80px;
+  display: inline-block;
+  width: 70px;
+  height: 45px;
+}
+
+area {
+  background-color: black;
+}
+</style>
+</head>
+<body>
+  <audio src="http://nedbee.me/beep1.wav"></audio>
+  <audio src="http://nedbee.me/beep2.wav" id="beep"></audio>
+  <a id="start">START</a>
+  <a id="stop">STOP</a>
+  
+  <input type="number" id="bpmRange" min="60" max="220" value="60"><br>
+    
+  <div id="display">
+    <canvas width="40" height="180" id="canvas"></canvas>
+    <span id="bpm">60</span>
+    <div id='pattern'>&#x2669</div>
+  </div>
+  <div id="volume" class="yui3-skin-audio-light"></div>
+<script id="jsbin-javascript">
+(function() {
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || 
+                                      window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+ 
+    if (!window.requestAnimationFrame)
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+              timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+ 
+    if (!window.cancelAnimationFrame)
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+  
+    window.performance = window.performance || {};
+    performance.now = (function() {
+      return performance.now       ||
+             performance.mozNow    ||
+             performance.msNow     ||
+             performance.oNow      ||
+             performance.webkitNow ||
+             function() { return new Date().getTime(); };
+    })();
+}());
+
+var mariozski = function() {
+  return {
+    metronome: function() {
+      var audio = [],
+          canvas = document.getElementById('canvas'), 
+          ctx = canvas.getContext('2d'),
+          bpm = 60,
+          enabled = false,
+          interval = {},
+          delay = 0,
+          meter = { up: 4, down: 4 }, 
+          beatCount = 0,
+          lastTime = 0,
+          lastBeat = 0,
+          requestId = 0,
+          beatDone = false,
+          notes = ['&#x2669', '&#x266b', '&#x266a&#x1D13E&#x266a', '&#x266b&#x1D13E','&#x266a&#x266b', '&#x266b&#x266b'],
+          patterns = [[1],[1,1],[1,0,1],[1,1,0],[1,1,1],[1,1,1,1]],
+          patternIdx = 0,
+          pattern = patterns[patternIdx];
+      
+      
+      var animate = function (time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        var curBeat = (time - lastBeat) / (delay / (meter.down / 4) / pattern.length);// (((lastBeat) * (meter.down/4))/delay)%1;
+        lastTime = time;
+        
+        var fill = beatCount === 0 ? 
+          curBeat < 0.5 ? curBeat*canvas.height*2 : (1 - curBeat)*canvas.height*2 :
+          curBeat < 0.5 ? curBeat*(canvas.height) : (1 - curBeat)*(canvas.height);        
+        
+        ctx.fillStyle="#3A2F2F"; 
+        ctx.fillRect(0, canvas.height, canvas.width, -fill);
+        ctx.fillStyle="#8FAC64"; 
+        for (var i = 0; i < 20; i++) {  
+          ctx.fillRect(0, canvas.height - (i*5), canvas.width, 2);
+        }
+        
+        requestId = window.requestAnimationFrame(animate);
+      };
+      
+      var createAudio = function (first) {
+        var element = document.createElement('audio');
+        if (element.canPlayType('audio/wav')) {
+          element.src = first === true ? "http://xuen.pl/metronome/beep1.wav" : "http://xuen.pl/metronome/beep2.wav";
+        } else if (element.canPlayType('audio/mpeg')) {
+          element.src = first === true ? "http://xuen.pl/metronome/beep1.mp3" : "http://xuen.pl/metronome/beep2.mp3";
+        } else {
+           alert('Your browser does not support wav/mpeg audio.');
+        }
+        
+        return element;
+      };
+      
+      var start = function () {
+        if (typeof interval === 'number')
+          return; 
+        
+        // delete old audio elements
+        for (var a in audio) {
+          if (audio.hasOwnProperty(a)) {
+            delete audio[a];
+          }
+        }
+        
+        // create new audio elements according to beat
+        audio = [createAudio(true)];
+        for (var i = 1; i < Math.floor(meter.up * pattern.length); i++) {
+          audio.push(createAudio(false));
+        } 
+        
+        // set starting value
+        //changeVolume({ newVal: slider.get('value') }); 
+        changeVolume({ newVal: 100 }); 
+        
+        delay = Math.floor(60000/bpm);
+        lastTime = performance.now(); 
+        lastBeat = 0;
+        beatCount = 0;
+        requestId = window.requestAnimationFrame(animate); 
+        
+        lastBeat = performance.now();
+        // set interval playing beats according to bpm
+        interval = setInterval(function () {
+          var patternPlace = beatCount % pattern.length;
+          if (pattern[patternPlace] === 1) {
+            audio[beatCount].play();
+          }
+          beatCount = (beatCount + 1) % (meter.up * pattern.length);
+          lastBeat = performance.now();
+        }, delay / (meter.down / 4) / pattern.length);   
+      };
+      
+      var stop = function () {
+        window.cancelAnimationFrame(requestId);
+        clearInterval(interval);
+        interval = {};
+      };
+      
+      var showBpm = function () {
+        document.getElementById('bpm').innerHTML = bpm.toString();  
+      };
+      
+      var changeVolume = function (e) {
+        for (var a in audio) {
+          audio[a].volume = e.newVal / 100;
+        }
+      };
+      
+      var reset = function () {
+        stop(); 
+        start();
+      };
+      
+      // attach events
+      document.getElementById('stop').addEventListener('click', stop);
+      document.getElementById('start').addEventListener('click', function () { start(); });
+      document.getElementById('bpmRange').addEventListener('change', function(e) { 
+        bpm = parseInt(e.target.value, 10); 
+        showBpm(); 
+        reset(); 
+      });
+      
+      document.getElementById('pattern').addEventListener('click', function (e) { 
+        patternIdx = (patternIdx + 1) % patterns.length;
+        pattern = patterns[patternIdx]; 
+        e.target.innerHTML = notes[patternIdx];
+        reset(); 
+      });
+      
+      //slider.render('#volume');   
+      //slider.on('valueChange', changeVolume);
+    }
+  };
+}();
+
+mariozski.metronome(); 
+
+
+  
+
+</script>
+</body>
+</html>
